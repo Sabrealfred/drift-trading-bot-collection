@@ -1,0 +1,228 @@
+# Docker Compose para Sistema Consolidado de Trading
+# ==================================================
+
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: trading_postgres
+    environment:
+      POSTGRES_DB: trading_bot
+      POSTGRES_USER: trading_user
+      POSTGRES_PASSWORD: trading_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - trading_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading_user -d trading_bot"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: trading_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - trading_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # InfluxDB para time series
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: trading_influxdb
+    environment:
+      INFLUXDB_DB: market_data
+      INFLUXDB_ADMIN_USER: admin
+      INFLUXDB_ADMIN_PASSWORD: admin
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    ports:
+      - "8086:8086"
+    networks:
+      - trading_network
+
+  # Aplicación principal
+  trading_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading_app
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=trading_bot
+      - DB_USER=trading_user
+      - DB_PASSWORD=trading_pass
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - INFLUX_HOST=influxdb
+      - INFLUX_PORT=8086
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_started
+    networks:
+      - trading_network
+    restart: unless-stopped
+
+  # Celery Worker para tareas asíncronas
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading_celery_worker
+    command: celery -A src.main.celery worker --loglevel=info
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - trading_bot
+    networks:
+      - trading_network
+    restart: unless-stopped
+
+  # Celery Beat para tareas programadas
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading_celery_beat
+    command: celery -A src.main.celery beat --loglevel=info
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - trading_bot
+    networks:
+      - trading_network
+    restart: unless-stopped
+
+  # Prometheus para métricas
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: trading_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - trading_network
+
+  # Grafana para dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: trading_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - trading_network
+
+  # Dashboard Web Frontend
+  web_dashboard:
+    build:
+      context: ./src/web
+      dockerfile: Dockerfile
+    container_name: trading_web_dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - trading_bot
+    networks:
+      - trading_network
+
+  # Nginx para reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: trading_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - trading_bot
+      - web_dashboard
+    networks:
+      - trading_network
+
+  # Jupyter Notebook para desarrollo
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter
+    container_name: trading_jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./data:/app/data
+      - ./src:/app/src
+    networks:
+      - trading_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  influxdb_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  trading_network:
+    driver: bridge

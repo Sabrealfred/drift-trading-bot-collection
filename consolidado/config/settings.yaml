@@ -1,0 +1,384 @@
+# Configuración Principal del Sistema Consolidado de Trading
+# =========================================================
+
+# Configuración General
+app:
+  name: "TradingBot Consolidado"
+  version: "1.0.0"
+  environment: "development"  # development, staging, production
+  timezone: "UTC"
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+
+# Fuentes de Datos
+data_sources:
+  # Exchange Principal para Trading
+  drift:
+    enabled: true
+    type: "drift"
+    network: "mainnet-beta"  # mainnet-beta, devnet
+    rpc_endpoint: "${SOLANA_RPC_ENDPOINT:https://api.mainnet-beta.solana.com}"
+    wallet_keypair: "${DRIFT_WALLET_KEYPAIR}"  # Base58 encoded keypair
+    environment: "mainnet"  # mainnet, devnet
+    rate_limit: 100  # requests per second
+    
+  # Exchange para datos históricos y backup
+  binance:
+    enabled: true
+    type: "binance"
+    api_key: "${BINANCE_API_KEY}"
+    api_secret: "${BINANCE_API_SECRET}"
+    sandbox: true
+    testnet: true
+    rate_limit: 1200  # requests per minute
+    use_for: "data_only"  # data_only, trading, both
+    
+  # Datos de Yahoo Finance para análisis macro
+  yahoo:
+    enabled: true
+    type: "yahoo"
+    rate_limit: 2000
+    use_for: "macro_data"  # macro economic indicators
+    
+  # Kraken como backup
+  kraken:
+    enabled: false
+    type: "kraken"
+    api_key: "${KRAKEN_API_KEY}"
+    api_secret: "${KRAKEN_API_SECRET}"
+    use_for: "data_backup"
+
+# Configuración de Base de Datos
+database:
+  # Base de datos principal
+  main:
+    type: "postgresql"
+    host: "${DB_HOST:localhost}"
+    port: "${DB_PORT:5432}"
+    database: "${DB_NAME:trading_bot}"
+    username: "${DB_USER:trading_user}"
+    password: "${DB_PASSWORD:trading_pass}"
+    
+  # Cache Redis
+  cache:
+    type: "redis"
+    host: "${REDIS_HOST:localhost}"
+    port: "${REDIS_PORT:6379}"
+    password: "${REDIS_PASSWORD:}"
+    db: 0
+    
+  # Time series (InfluxDB)
+  timeseries:
+    type: "influxdb"
+    host: "${INFLUX_HOST:localhost}"
+    port: "${INFLUX_PORT:8086}"
+    database: "market_data"
+    username: "${INFLUX_USER:admin}"
+    password: "${INFLUX_PASSWORD:admin}"
+
+# Configuración de Estrategias
+strategies:
+  # Estrategias de Reinforcement Learning
+  ppo_strategy:
+    enabled: true
+    type: "ppo"
+    model_path: "data/models/ppo_model.pkl"
+    learning_rate: 0.0003
+    batch_size: 64
+    n_epochs: 10
+    clip_range: 0.2
+    
+  dqn_strategy:
+    enabled: true
+    type: "dqn"
+    model_path: "data/models/dqn_model.pkl"
+    learning_rate: 0.001
+    epsilon_start: 1.0
+    epsilon_end: 0.01
+    epsilon_decay: 0.995
+    memory_size: 10000
+    
+  # Estrategias de Machine Learning
+  lstm_strategy:
+    enabled: true
+    type: "lstm"
+    model_path: "data/models/lstm_model.h5"
+    sequence_length: 60
+    prediction_horizon: 1
+    retrain_interval: "24h"
+    
+  # Estrategias Técnicas
+  rsi_strategy:
+    enabled: true
+    type: "rsi"
+    period: 14
+    oversold_threshold: 30
+    overbought_threshold: 70
+    
+  macd_strategy:
+    enabled: true
+    type: "macd"
+    fast_period: 12
+    slow_period: 26
+    signal_period: 9
+
+# Configuración de Ensemble
+ensemble:
+  method: "weighted"  # voting, weighted, confidence, best_performer
+  min_confidence: 0.6
+  strategy_weights:
+    ppo_strategy: 1.5
+    dqn_strategy: 1.2
+    lstm_strategy: 1.0
+    rsi_strategy: 0.8
+    macd_strategy: 0.7
+
+# Gestión de Riesgo
+risk_management:
+  # Límites globales
+  max_portfolio_risk: 0.02  # 2% del portfolio
+  max_single_position_risk: 0.01  # 1% por posición
+  max_daily_loss: 0.05  # 5% pérdida diaria máxima
+  max_drawdown: 0.20  # 20% drawdown máximo
+  
+  # Stop-loss
+  default_stop_loss_pct: 0.02  # 2%
+  trailing_stop_enabled: true
+  trailing_stop_distance: 0.01  # 1%
+  
+  # Take-profit
+  default_take_profit_ratio: 2.0  # 2:1 reward/risk
+  min_risk_reward_ratio: 1.5
+  
+  # Position sizing
+  base_position_pct: 0.05  # 5% del portfolio base
+  max_single_position_pct: 0.20  # 20% máximo en una posición
+  
+  # Portfolio
+  max_positions: 10
+  min_cash_reserve: 0.10  # 10% en cash
+
+# Sistema de Alertas
+alerts:
+  # Configuración general
+  alert_workers: 3
+  max_history_size: 1000
+  duplicate_window_minutes: 5
+  
+  # Canales por defecto según prioridad
+  default_channels:
+    critical: ["telegram", "email", "sms"]
+    high: ["telegram", "email"]
+    medium: ["telegram"]
+    low: ["email"]
+  
+  # Rate limiting por canal
+  rate_limits:
+    telegram:
+      critical:
+        max_per_minute: 3
+        max_per_hour: 20
+      high:
+        max_per_minute: 2
+        max_per_hour: 15
+      medium:
+        max_per_minute: 1
+        max_per_hour: 10
+    
+    email:
+      critical:
+        max_per_hour: 10
+      high:
+        max_per_hour: 5
+      medium:
+        max_per_hour: 3
+    
+    sms:
+      critical:
+        max_per_hour: 5
+      high:
+        max_per_hour: 2
+
+# Canales de Alertas
+channels:
+  telegram:
+    enabled: true
+    type: "telegram"
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+    
+  email:
+    enabled: true
+    type: "email"
+    smtp_server: "${SMTP_SERVER:smtp.gmail.com}"
+    smtp_port: 587
+    username: "${EMAIL_USERNAME}"
+    password: "${EMAIL_PASSWORD}"
+    from_email: "${FROM_EMAIL}"
+    to_emails: ["${ALERT_EMAIL}"]
+    
+  discord:
+    enabled: false
+    type: "discord"
+    webhook_url: "${DISCORD_WEBHOOK_URL}"
+    
+  sms:
+    enabled: false
+    type: "sms"
+    twilio_account_sid: "${TWILIO_SID}"
+    twilio_auth_token: "${TWILIO_TOKEN}"
+    from_number: "${TWILIO_FROM}"
+    to_numbers: ["${ALERT_PHONE}"]
+
+# Triggers de Alertas
+triggers:
+  signal_trigger:
+    enabled: true
+    type: "signal"
+    confidence_threshold: 0.8
+    
+  price_trigger:
+    enabled: true
+    type: "price"
+    price_change_threshold: 0.05  # 5%
+    
+  risk_trigger:
+    enabled: true
+    type: "risk"
+    max_drawdown_alert: 0.10  # 10%
+    daily_loss_alert: 0.03  # 3%
+
+# Configuración de API
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  
+  # Autenticación
+  auth:
+    enabled: true
+    secret_key: "${API_SECRET_KEY}"
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+  
+  # Rate limiting
+  rate_limit:
+    requests_per_minute: 60
+    
+  # CORS
+  cors:
+    allow_origins: ["http://localhost:3000"]
+    allow_methods: ["GET", "POST", "PUT", "DELETE"]
+
+# Dashboard Web
+web_dashboard:
+  enabled: true
+  port: 3000
+  
+  # Features habilitadas
+  features:
+    real_time_charts: true
+    strategy_performance: true
+    risk_monitoring: true
+    alert_management: true
+    backtesting: true
+    
+  # Actualización en tiempo real
+  websocket:
+    enabled: true
+    update_interval: 1  # segundos
+
+# Configuración de Backtesting
+backtesting:
+  # Configuración por defecto
+  initial_capital: 10000  # USD
+  commission: 0.001  # 0.1%
+  slippage: 0.0005  # 0.05%
+  
+  # Períodos de prueba
+  default_periods:
+    - name: "last_month"
+      days: 30
+    - name: "last_quarter"
+      days: 90
+    - name: "last_year"
+      days: 365
+      
+  # Métricas a calcular
+  metrics:
+    - "total_return"
+    - "sharpe_ratio"
+    - "max_drawdown"
+    - "win_rate"
+    - "profit_factor"
+    - "calmar_ratio"
+
+# Monitoreo y Logging
+monitoring:
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    port: 9090
+    
+  # Health checks
+  health_check:
+    enabled: true
+    interval: 60  # segundos
+    
+  # Logging
+  logging:
+    level: "INFO"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    
+    # Archivos de log
+    files:
+      main: "logs/trading_bot.log"
+      errors: "logs/errors.log"
+      trades: "logs/trades.log"
+      alerts: "logs/alerts.log"
+      
+    # Rotación de logs
+    rotation:
+      max_size: "10MB"
+      backup_count: 5
+
+# Configuración de Símbolos
+symbols:
+  # Criptomonedas principales
+  crypto:
+    - "BTC/USDT"
+    - "ETH/USDT"
+    - "BNB/USDT"
+    - "ADA/USDT"
+    - "SOL/USDT"
+    - "DOT/USDT"
+    
+  # Stocks (si Alpaca está habilitado)
+  stocks:
+    - "AAPL"
+    - "GOOGL"
+    - "MSFT"
+    - "TSLA"
+    - "AMZN"
+    
+  # Timeframes a monitorear
+  timeframes:
+    - "1m"   # 1 minuto
+    - "5m"   # 5 minutos
+    - "15m"  # 15 minutos
+    - "1h"   # 1 hora
+    - "4h"   # 4 horas
+    - "1d"   # 1 día
+
+# Configuración de Performance
+performance:
+  # Cache
+  cache_ttl: 300  # 5 minutos
+  
+  # Concurrencia
+  max_concurrent_requests: 50
+  
+  # Batch processing
+  batch_size: 100
+  
+  # Memory limits
+  max_memory_usage: "2GB"

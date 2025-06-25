@@ -1,0 +1,313 @@
+# Configuración Específica para Drift.trade
+# =====================================
+
+# Configuración Principal de Drift.trade
+drift:
+  # Conexión a Solana y Drift Protocol
+  network: "mainnet-beta"  # mainnet-beta, devnet
+  solana_rpc: "${SOLANA_RPC_ENDPOINT:https://api.mainnet-beta.solana.com}"
+  drift_program_id: "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH"
+  
+  # Wallet Configuration
+  wallet:
+    keypair_path: "${DRIFT_WALLET_KEYPAIR}"  # Path to keypair file
+    subaccount_id: 0
+    
+  # Trading Configuration
+  trading:
+    environment: "mainnet"  # mainnet, devnet
+    cross_margin: true
+    jit_liquidity: true
+    auto_stake: false
+    
+  # API Limits
+  rate_limits:
+    requests_per_second: 10
+    websocket_subscriptions: 50
+
+# Activos Disponibles en Drift (Perpetuales)
+drift_assets:
+  # Tier 1 - Máxima Liquidez (Focus Principal)
+  tier1:
+    - symbol: "SOL-PERP"
+      name: "Solana Perpetual"
+      max_leverage: 20
+      recommended_leverage: 5
+      min_size_usd: 10
+      tick_size: 0.01
+      priority: 1
+      
+    - symbol: "BTC-PERP"
+      name: "Bitcoin Perpetual"
+      max_leverage: 20
+      recommended_leverage: 3
+      min_size_usd: 10
+      tick_size: 0.01
+      priority: 2
+      
+    - symbol: "ETH-PERP"
+      name: "Ethereum Perpetual"
+      max_leverage: 20
+      recommended_leverage: 3
+      min_size_usd: 10
+      tick_size: 0.01
+      priority: 3
+
+  # Tier 2 - Buena Liquidez
+  tier2:
+    - symbol: "BNB-PERP"
+      name: "BNB Perpetual"
+      max_leverage: 20
+      recommended_leverage: 2
+      min_size_usd: 10
+      priority: 4
+      
+    - symbol: "XRP-PERP"
+      name: "Ripple Perpetual"
+      max_leverage: 20
+      recommended_leverage: 2
+      min_size_usd: 10
+      priority: 5
+      
+    - symbol: "DOGE-PERP"
+      name: "Dogecoin Perpetual"
+      max_leverage: 20
+      recommended_leverage: 2
+      min_size_usd: 10
+      priority: 6
+
+  # Tier 3 - Altcoins (Mayor Volatilidad)
+  tier3:
+    - symbol: "AVAX-PERP"
+      name: "Avalanche Perpetual"
+      max_leverage: 10
+      recommended_leverage: 2
+      min_size_usd: 10
+      priority: 7
+      
+    - symbol: "MATIC-PERP"
+      name: "Polygon Perpetual"
+      max_leverage: 10
+      recommended_leverage: 2
+      min_size_usd: 10
+      priority: 8
+      
+    - symbol: "APT-PERP"
+      name: "Aptos Perpetual"
+      max_leverage: 10
+      recommended_leverage: 2
+      min_size_usd: 10
+      priority: 9
+      
+    - symbol: "JTO-PERP"
+      name: "Jito Perpetual"
+      max_leverage: 10
+      recommended_leverage: 2
+      min_size_usd: 10
+      priority: 10
+
+# Estrategias Específicas para Drift Trading
+drift_strategies:
+  # Estrategia de Funding Rate Arbitrage
+  funding_rate_strategy:
+    enabled: true
+    type: "funding_arbitrage"
+    
+    # Thresholds de funding rate
+    funding_thresholds:
+      high_funding: 0.01    # 1% = señal SELL
+      low_funding: -0.01    # -1% = señal BUY
+      extreme_funding: 0.02 # 2% = señal fuerte
+      
+    # Configuración
+    lookback_periods: 8     # 8 períodos de funding
+    position_size_multiplier: 1.5
+    max_hold_time: 28800    # 8 horas
+    
+  # Estrategia de Liquidation Heatmap
+  liquidation_strategy:
+    enabled: true
+    type: "liquidation_levels"
+    
+    # Umbrales de liquidaciones
+    liquidation_thresholds:
+      small: 100000         # $100k
+      medium: 500000        # $500k  
+      large: 1000000        # $1M
+      massive: 5000000      # $5M
+      
+    # Timeframes para análisis
+    timeframes: ["1m", "5m", "15m"]
+    sentiment_weight: 0.4
+    
+  # Estrategia del Ecosistema Solana
+  solana_ecosystem_strategy:
+    enabled: true
+    type: "ecosystem_momentum"
+    
+    # Assets del ecosistema
+    ecosystem_assets:
+      - "SOL-PERP"
+      - "JTO-PERP"
+      
+    # Métricas del ecosistema
+    metrics:
+      staking_ratio: true
+      defi_tvl: true
+      nft_volume: true
+      transaction_count: true
+      
+    correlation_threshold: 0.6
+
+# Gestión de Riesgo Específica para Drift
+drift_risk_management:
+  # Límites de Portfolio
+  portfolio_limits:
+    max_total_leverage: 5.0       # Leverage total máximo
+    max_single_asset_exposure: 0.4  # 40% en un solo asset
+    max_correlation_exposure: 0.6   # 60% en assets correlacionados
+    min_free_collateral: 0.2       # 20% collateral libre
+    
+  # Liquidation Protection
+  liquidation_protection:
+    buffer_percentage: 0.15       # 15% buffer
+    auto_reduce_threshold: 0.10   # Auto-reduce al 10%
+    emergency_close_threshold: 0.05 # Cierre de emergencia al 5%
+    
+  # Funding Rate Risk
+  funding_risk:
+    max_daily_funding_cost: 0.02  # 2% costo diario máximo
+    funding_rate_alert: 0.008     # 0.8% alerta
+    auto_close_high_funding: true
+    
+  # Position Limits por Asset
+  asset_limits:
+    "SOL-PERP":
+      max_leverage: 5
+      max_position_size_usd: 25000
+      max_hold_time: 86400  # 24h
+      
+    "BTC-PERP":
+      max_leverage: 3
+      max_position_size_usd: 20000
+      max_hold_time: 172800  # 48h
+      
+    "ETH-PERP":
+      max_leverage: 3
+      max_position_size_usd: 20000
+      max_hold_time: 172800  # 48h
+      
+    "ALT-PERPS":
+      max_leverage: 2
+      max_position_size_usd: 10000
+      max_hold_time: 43200   # 12h
+
+# Monitoreo y Alertas para Drift
+drift_monitoring:
+  # Métricas a trackear
+  metrics:
+    funding_rates: true
+    perpetual_premiums: true
+    open_interest: true
+    liquidation_events: true
+    slippage_tracking: true
+    latency_monitoring: true
+    
+  # Alertas específicas
+  alerts:
+    high_funding_rate:
+      threshold: 0.01
+      channels: ["telegram", "email"]
+      
+    liquidation_cascade:
+      threshold: 5000000  # $5M en liquidaciones
+      channels: ["telegram", "email", "sms"]
+      
+    position_underwater:
+      threshold: -0.05    # -5% P&L
+      channels: ["telegram"]
+      
+    low_free_collateral:
+      threshold: 0.10     # 10% collateral libre
+      channels: ["telegram", "email"]
+
+# Configuración de Backtesting para Drift
+drift_backtesting:
+  # Datos específicos para perpetuales
+  data_requirements:
+    funding_rates: true
+    open_interest: true
+    liquidation_data: true
+    orderbook_snapshots: false  # Muy pesado
+    
+  # Costos de trading
+  trading_costs:
+    maker_fee: 0.0002      # 0.02%
+    taker_fee: 0.0005      # 0.05%
+    funding_8h: true       # Include funding costs
+    slippage_model: "linear"
+    
+  # Configuración de leverage en backtest
+  leverage_testing:
+    test_leverages: [1, 2, 3, 5, 10]
+    include_liquidations: true
+    liquidation_penalty: 0.01  # 1% penalty
+
+# Configuración del Dashboard para Drift
+drift_dashboard:
+  # Widgets específicos
+  widgets:
+    funding_rates_table: true
+    liquidation_heatmap: true
+    perpetual_premiums: true
+    position_monitor: true
+    pnl_tracker: true
+    free_collateral_gauge: true
+    leverage_utilization: true
+    
+  # Actualizaciones en tiempo real
+  realtime_updates:
+    funding_rates: 60     # Cada minuto
+    positions: 5          # Cada 5 segundos
+    prices: 1             # Cada segundo
+    liquidations: 10      # Cada 10 segundos
+
+# Configuración Avanzada
+advanced_config:
+  # Optimizaciones de performance
+  performance:
+    connection_pooling: true
+    async_processing: true
+    batch_operations: true
+    cache_funding_rates: true
+    
+  # Configuración de red
+  network:
+    timeout_seconds: 30
+    retry_attempts: 3
+    circuit_breaker: true
+    
+  # Logging específico para Drift
+  logging:
+    log_all_trades: true
+    log_funding_events: true
+    log_liquidation_events: true
+    log_api_calls: false    # Solo para debug
+    
+# Variables de Entorno Requeridas
+required_env_vars:
+  - SOLANA_RPC_ENDPOINT
+  - DRIFT_WALLET_KEYPAIR
+  - DRIFT_SUBACCOUNT_ID
+  - TELEGRAM_BOT_TOKEN
+  - TELEGRAM_CHAT_ID
+
+# Notas Importantes
+notes: |
+  1. Drift.trade es un DEX de perpetuales en Solana
+  2. Usa USDC como collateral principal
+  3. Máximo 50x leverage disponible, usar conservadoramente
+  4. Funding rates se pagan cada 8 horas
+  5. Liquidaciones pueden ser agresivas en alta volatilidad
+  6. Monitorear siempre el free collateral
+  7. JIT liquidity puede mejorar fills pero aumenta complejidad
