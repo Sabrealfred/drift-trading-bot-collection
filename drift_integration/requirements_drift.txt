@@ -1,0 +1,36 @@
+# Drift Trading Bot Requirements
+# Core Drift SDK
+driftpy>=0.20.0
+solders>=0.21.0
+solana>=0.32.0
+anchorpy>=0.20.1
+
+# Async support
+aiohttp>=3.9.0
+asyncio-throttle>=1.0.2
+websockets>=12.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Machine Learning
+torch>=2.0.0
+scikit-learn>=1.3.0
+
+# Technical Analysis
+ta>=0.10.2
+pandas-ta>=0.3.14b
+
+# API calls
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Monitoring
+psutil>=5.9.0
+prometheus-client>=0.19.0
+
+# Utils
+pyyaml>=6.0.1
+click>=8.1.7
+rich>=13.7.0

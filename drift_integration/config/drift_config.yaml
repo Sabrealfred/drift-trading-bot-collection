@@ -1,0 +1,110 @@
+# Drift Trading Bot Configuration
+
+# Network Configuration
+network:
+  environment: "devnet"  # "mainnet" or "devnet"
+  rpc_endpoint: "https://api.devnet.solana.com"
+  commitment: "confirmed"
+  
+# Drift Configuration
+drift:
+  program_id: "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH"  # Devnet
+  # program_id: "dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH"  # Mainnet
+  subaccount_id: 0
+  
+# Trading Configuration
+trading:
+  # Asset preferences (by priority)
+  preferred_assets:
+    - name: "SOL-PERP"
+      market_index: 0
+      max_leverage: 5
+      position_size_pct: 0.5  # 50% of capital
+      stop_loss_pct: 0.15     # 15%
+      take_profit_pct: 0.25   # 25%
+      
+    - name: "BTC-PERP" 
+      market_index: 1
+      max_leverage: 3
+      position_size_pct: 0.3  # 30% of capital
+      stop_loss_pct: 0.10     # 10%
+      take_profit_pct: 0.20   # 20%
+      
+    - name: "ETH-PERP"
+      market_index: 2
+      max_leverage: 4
+      position_size_pct: 0.4  # 40% of capital
+      stop_loss_pct: 0.12     # 12%
+      take_profit_pct: 0.22   # 22%
+
+  # Risk Management
+  risk_management:
+    max_daily_loss_pct: 0.05        # 5% max daily loss
+    max_drawdown_pct: 0.15          # 15% max drawdown
+    min_account_balance: 10.0       # Minimum 10 USDC
+    emergency_stop_loss_pct: 0.25   # 25% emergency stop
+
+# DRL Model Configuration
+model:
+  architecture: "DuelingDDQN"
+  input_features: 32
+  hidden_layers: [256, 512, 256]
+  learning_rate: 0.0001
+  batch_size: 128
+  memory_size: 100000
+  target_update_freq: 5
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.9999
+  gamma: 0.99
+  
+  # Advanced features
+  prioritized_replay: true
+  dueling_networks: true
+  double_dqn: true
+  noisy_networks: false
+  multi_step_learning: 3
+
+# Data Configuration
+data:
+  timeframes: ["1m", "5m", "15m", "1h"]
+  lookback_periods:
+    training: 90    # days
+    inference: 30   # days
+  
+  # Feature engineering
+  technical_indicators:
+    - "rsi"
+    - "macd" 
+    - "bollinger_bands"
+    - "volume_profile"
+    - "funding_rate"
+    - "order_flow"
+    
+# Performance Targets
+targets:
+  daily_return_target: 0.05      # 5% daily target
+  monthly_return_target: 1.5     # 150% monthly target
+  annual_return_target: 9.0      # 900% annual target
+  sharpe_ratio_min: 2.0          # Minimum Sharpe ratio
+  max_consecutive_losses: 3      # Stop after 3 consecutive losses
+
+# Monitoring
+monitoring:
+  enable_prometheus: true
+  metrics_port: 8000
+  log_level: "INFO"
+  save_performance_data: true
+  
+# Webhooks/Alerts
+alerts:
+  discord_webhook: ""  # Add your Discord webhook URL
+  telegram_bot_token: ""
+  telegram_chat_id: ""
+  
+# Backtest Configuration  
+backtest:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+  initial_capital: 1000.0
+  commission_rate: 0.0005  # 0.05%
